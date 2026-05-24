@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EU ID Verification Hub Pro</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="My Ausweis">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .eu-gradient {
+            background: linear-gradient(135deg, #003399 0%, #001144 100%);
+        }
+        /* Flüssige Animation für den Scan-Balken */
+        @keyframes scan {
+            0% { top: 0%; opacity: 1; }
+            50% { top: 100%; opacity: 1; }
+            100% { top: 0%; opacity: 1; }
+        }
+        .scanner-line {
+            animation: scan 2s linear infinite;
+        }
+        /* Flüssige Seitenübergänge */
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 font-sans min-h-screen text-slate-100 flex flex-col justify-between">
+
+    <header class="eu-gradient text-white p-5 shadow-2xl border-b border-blue-800 flex justify-between items-center backdrop-blur-md sticky top-0 z-40">
+        <div class="flex items-center space-x-4">
+            <div id="app-logo" class="w-11 h-11 bg-yellow-400 rounded-xl flex items-center justify-center font-bold text-blue-950 text-2xl shadow-lg shadow-yellow-500/20 transform hover:rotate-12 transition">
+                ★
+            </div>
+            <div>
+                <h1 id="app-name" class="text-lg font-extrabold tracking-wider uppercase text-yellow-400">EU ID HUB</h1>
+                <p class="text-xs text-slate-300 font-medium tracking-tight">Digital Verification System</p>
+            </div>
+        </div>
+        <button id="btn-settings" class="bg-slate-800/80 hover:bg-yellow-400 hover:text-blue-950 text-white w-10 h-10 rounded-xl transition flex items-center justify-center border border-slate-700 shadow-md">
+            <i class="fas fa-cog text-lg"></i>
+        </button>
+    </header>
+
+    <main class="max-w-lg w-full mx-auto p-4 sm:p-6 flex-grow flex flex-col justify-center">
+        
+        <section id="view-scan" class="bg-slate-800/90 rounded-3xl shadow-2xl p-6 border border-slate-700/50 fade-in">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-400 mb-3 border border-blue-500/20">
+                    <i class="fas fa-shield-halved text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-black tracking-tight text-white">Dokumenten-Prüfung</h2>
+                <p class="text-sm text-slate-400 mt-1">Laden Sie ein Foto Ihres Personalausweises, Führerscheins oder Radausweises hoch.</p>
+            </div>
+
+            <div class="border-2 border-dashed border-slate-600 hover:border-blue-400 rounded-2xl p-6 bg-slate-900/50 text-center mb-6 transition cursor-pointer relative group">
+                <input type="file" id="file-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10">
+                
+                <div id="upload-status-ready" class="space-y-2">
+                    <i class="fas fa-cloud-arrow-up text-slate-400 group-hover:text-blue-400 text-4xl transition mb-1"></i>
+                    <p class="text-sm font-bold text-slate-200">Foto auswählen oder aufnehmen</p>
+                    <p class="text-xs text-slate-500">Unterstützt alle gängigen Bildformate</p>
+                </div>
+
+                <div id="upload-status-loaded" class="hidden space-y-2 text-green-400">
+                    <i class="fas fa-file-circle-check text-4xl"></i>
+                    <p class="text-sm font-bold">Bild erfolgreich geladen!</p>
+                    <p class="text-xs text-slate-400" id="loaded-file-name">ausweis.jpg</p>
+                </div>
+            </div>
+
+            <div id="scanner-animation-zone" class="hidden relative w-full h-48 bg-slate-950 rounded-2xl overflow-hidden mb-6 border border-blue-500/30">
+                <img id="scan-blur-preview" src="" class="w-full h-full object-cover opacity-40 blur-xs">
+                <div class="absolute inset-0 bg-gradient-to-t from-blue-500/10 to-transparent"></div>
+                <div class="scanner-line absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent shadow-[0_0_15px_#3b82f6]"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="bg-slate-900/90 border border-blue-500/30 px-4 py-2 rounded-xl text-xs font-bold tracking-widest text-blue-400 uppercase animate-pulse">
+                        <i class="fas fa-microchip mr-1.5"></i> KI Analysiert Dokument...
+                    </span>
+                </div>
+            </div>
+
+            <div class="bg-slate-900/80 p-5 rounded-2xl border border-slate-700/60 mb-6 space-y-3">
+                <p class="text-xs font-extrabold text-slate-400 uppercase tracking-widest flex items-center">
+                    <i class="fas fa-keyboard mr-2 text-yellow-400"></i>Daten für Verifikation eingeben:
+                </p>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Vorname</label>
+                        <input type="text" id="sim-vorname" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm font-medium focus:border-blue-500 focus:outline-none transition" value="Max">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Nachname</label>
+                        <input type="text" id="sim-nachname" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm font-medium focus:border-blue-500 focus:outline-none transition" value="Mustermann">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Geburtsdatum</label>
+                        <input type="date" id="sim-geburtsdatum" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm font-medium focus:border-blue-500 focus:outline-none transition" value="2010-05-15">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Ausweistyp</label>
+                        <select id="sim-typ" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm font-medium focus:border-blue-500 focus:outline-none transition text-slate-200">
+                            <option value="Radausweis">🚴 Radausweis</option>
+                            <option value="Personalausweis">🪪 Personalausweis</option>
+                            <option value="Führerschein">🚗 Führerschein</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Adresse</label>
+                        <input type="text" id="sim-adresse" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm font-medium focus:border-blue-500 focus:outline-none transition" value="Hauptstraße 10">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Land</label>
+                        <input type="text" id="sim-land" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm font-medium focus:border-blue-500 focus:outline-none transition" value="Österreich">
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-process" class="w-full eu-gradient hover:from-blue-600 hover:to-blue-900 text-white font-extrabold py-3.5 px-4 rounded-xl shadow-xl transition transform active:scale-[0.98] flex items-center justify-center space-x-2 border border-blue-600">
+                <i class="fas fa-qrcode"></i>
+                <span>Verifikation starten</span>
+            </button>
+        </section>
+
+        <section id="view-dashboard" class="bg-slate-800/90 rounded-3xl shadow-2xl p-6 border border-slate-700/50 fade-in hidden">
+            <div class="text-center mb-6 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 p-5 rounded-2xl border border-emerald-500/20 shadow-inner">
+                <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-2 text-xl border border-emerald-500/30">
+                    <i class="fas fa-user-check"></i>
+                </div>
+                <h2 class="text-2xl font-black text-white tracking-tight">Wilkommen, <span id="dash-welcome-name" class="text-yellow-400">Max</span>!</h2>
+                <p class="text-xs text-emerald-400 font-semibold tracking-wider uppercase mt-1">Status: Erfolgreich Verifiziert</p>
+            </div>
+
+            <div class="space-y-3 mb-6">
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest flex items-center">
+                    <i class="fas fa-server mr-2 text-blue-400"></i> Ausgelesene Datensätze
+                </h3>
+                <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-700/60 space-y-2.5 text-sm">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <span class="text-slate-400 font-medium text-xs">DOKUMENTTYP</span>
+                        <span id="dash-typ" class="font-black px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs uppercase">Radausweis</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <span class="text-slate-400 font-medium text-xs">VORNAME</span>
+                        <span id="dash-vorname" class="font-bold text-slate-200">Max</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <span class="text-slate-400 font-medium text-xs">NACHNAME</span>
+                        <span id="dash-nachname" class="font-bold text-slate-200">Mustermann</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <span class="text-slate-400 font-medium text-xs">GEBURTSDATUM</span>
+                        <span id="dash-geburtsdatum" class="font-bold text-slate-200">15.05.2010</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <span class="text-slate-400 font-medium text-xs">ADRESSE</span>
+                        <span id="dash-adresse" class="font-bold text-slate-200">Hauptstraße 10</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <span class="text-slate-400 font-medium text-xs">LAND</span>
+                        <span id="dash-land" class="font-bold text-slate-200">Österreich</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400 font-medium text-xs">SCAN-LOG ZEITPUNKT</span>
+                        <span id="dash-zeit" class="text-slate-400 font-mono text-xs">24.05.2026, 20:00:21</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2 flex items-center">
+                    <i class="fas fa-folder-open mr-2 text-yellow-400"></i> Datei-Archiv
+                </h3>
+                <button id="btn-show-file" class="w-full bg-slate-900 hover:bg-slate-700 text-slate-200 font-bold py-3 px-4 rounded-xl border border-slate-700 transition flex items-center justify-between shadow-md">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-image text-blue-400"></i>
+                        <span>Gescenntes Foto anzeigen</span>
+                    </div>
+                    <i class="fas fa-chevron-down text-xs text-slate-500 transition-transform duration-300" id="chevron-icon"></i>
+                </button>
+                
+                <div id="image-preview-container" class="hidden mt-3 p-3 bg-slate-950 rounded-2xl border border-slate-800">
+                    <img id="image-preview" src="" alt="Ausweis Vorschau" class="w-full h-auto rounded-xl shadow-lg border border-slate-800">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-2">
+                <button id="btn-reset" class="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold py-3 px-4 rounded-xl border border-red-500/20 transition flex items-center justify-center space-x-2">
+                    <i class="fas fa-trash-can"></i>
+                    <span>Eintrag löschen / Neu scannen</span>
+                </button>
+            </div>
+        </section>
+
+        <div id="modal-settings" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50 transition-opacity duration-300">
+            <div class="bg-slate-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-700 transform scale-95 transition-transform duration-300">
+                <div class="flex justify-between items-center mb-5">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-user-gear text-yellow-400 text-lg"></i>
+                        <h3 class="text-lg font-black text-white tracking-tight">Daten korrigieren</h3>
+                    </div>
+                    <button id="btn-close-settings" class="w-7 h-7 bg-slate-900 hover:bg-slate-700 rounded-full flex items-center justify-center text-slate-400 text-xs transition"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="space-y-4 text-sm">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Ausweis-Typ ändern</label>
+                        <select id="edit-typ" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 font-bold text-slate-200 focus:border-blue-500 focus:outline-none">
+                            <option value="Radausweis">🚴 Radausweis</option>
+                            <option value="Personalausweis">🪪 Personalausweis</option>
+                            <option value="Führerschein">🚗 Führerschein</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Vorname</label>
+                        <input type="text" id="edit-vorname" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 font-medium focus:border-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Nachname</label>
+                        <input type="text" id="edit-nachname" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 font-medium focus:border-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Geburtsdatum</label>
+                        <input type="date" id="edit-geburtsdatum" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 font-medium focus:border-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Adresse</label>
+                        <input type="text" id="edit-adresse" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 font-medium focus:border-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Land</label>
+                        <input type="text" id="edit-land" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 font-medium focus:border-blue-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <button id="btn-save-settings" class="w-full eu-gradient text-white font-extrabold py-3 px-4 rounded-xl shadow-lg border border-blue-600 hover:opacity-90 transition">
+                        Änderungen übernehmen
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="text-center p-4 text-[11px] text-slate-500 font-mono tracking-widest border-t border-slate-800/50 bg-slate-950/20">
+        SECURE DATA STORAGE // LOCAL ENCRYPTION ACTIVE
+    </footer>
+
+    <script>
+        let currentData = JSON.parse(localStorage.getItem('eu_id_data_pro_v2')) || {
+            vorname: "",
+            nachname: "",
+            geburtsdatum: "",
+            typ: "",
+            adresse: "",
+            land: "",
+            scanZeit: "",
+            imageSrc: ""
+        };
+
+        const viewScan = document.getElementById('view-scan');
+        const viewDashboard = document.getElementById('view-dashboard');
+        const modalSettings = document.getElementById('modal-settings');
+        const fileInput = document.getElementById('file-input');
+        const imgPreview = document.getElementById('image-preview');
+        const imgContainer = document.getElementById('image-preview-container');
+        const scanZone = document.getElementById('scanner-animation-zone');
+        const scanBlurPreview = document.getElementById('scan-blur-preview');
+        const upReady = document.getElementById('upload-status-ready');
+        const upLoaded = document.getElementById('upload-status-loaded');
+        const chevron = document.getElementById('chevron-icon');
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (currentData.vorname && currentData.nachname) {
+                renderDashboardData();
+                if (currentData.imageSrc) {
+                    imgPreview.src = currentData.imageSrc;
+                }
+                viewScan.classList.add('hidden');
+                viewDashboard.classList.remove('hidden');
+            }
+        });
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('loaded-file-name').textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    currentData.imageSrc = event.target.result;
+                    imgPreview.src = event.target.result;
+                    scanBlurPreview.src = event.target.result;
+                    upReady.classList.add('hidden');
+                    upLoaded.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('btn-process').addEventListener('click', () => {
+            scanZone.classList.remove('hidden');
+            document.getElementById('btn-process').disabled = true;
+            document.getElementById('btn-process').classList.add('opacity-50');
+
+            setTimeout(() => {
+                currentData.vorname = document.getElementById('sim-vorname').value;
+                currentData.nachname = document.getElementById('sim-nachname').value;
+                currentData.geburtsdatum = document.getElementById('sim-geburtsdatum').value;
+                currentData.typ = document.getElementById('sim-typ').value;
+                currentData.adresse = document.getElementById('sim-adresse').value;
+                currentData.land = document.getElementById('sim-land').value;
+                
+                const jetzt = new Date();
+                currentData.scanZeit = jetzt.toLocaleString('de-DE');
+
+                if (!currentData.imageSrc) {
+                    currentData.imageSrc = "https://via.placeholder.com/450x280/1e293b/3b82f6?text=EU+STANDARD+DOCUMENT";
+                    imgPreview.src = currentData.imageSrc;
+                }
+
+                renderDashboardData();
+                localStorage.setItem('eu_id_data_pro_v2', JSON.stringify(currentData));
+
+                scanZone.classList.add('hidden');
+                viewScan.classList.add('hidden');
+                viewDashboard.classList.remove('hidden');
+
+                document.getElementById('btn-process').disabled = false;
+                document.getElementById('btn-process').classList.remove('opacity-50');
+            }, 2500);
+        });
+
+        function renderDashboardData() {
+            document.getElementById('dash-welcome-name').textContent = currentData.vorname;
+            document.getElementById('dash-vorname').textContent = currentData.vorname;
+            document.getElementById('dash-nachname').textContent = currentData.nachname;
+            document.getElementById('dash-typ').textContent = currentData.typ;
+            document.getElementById('dash-adresse').textContent = currentData.adresse;
+            document.getElementById('dash-land').textContent = currentData.land;
+            
+            if(currentData.geburtsdatum) {
+                const d = new Date(currentData.geburtsdatum);
+                document.getElementById('dash-geburtsdatum').textContent = d.toLocaleDateString('de-DE');
+            }
+            document.getElementById('dash-zeit').textContent = currentData.scanZeit;
+        }
+
+        document.getElementById('btn-show-file').addEventListener('click', () => {
+            imgContainer.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180');
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            if(confirm("Befehl bestätigen: Möchten Sie dieses Dokument wirklich unwiderruflich löschen?")) {
+                localStorage.removeItem('eu_id_data_pro_v2');
+                currentData = { vorname: "", nachname: "", geburtsdatum: "", typ: "", adresse: "", land: "", scanZeit: "", imageSrc: "" };
+                
+                upReady.classList.remove('hidden');
+                upLoaded.classList.add('hidden');
+                fileInput.value = "";
+                imgPreview.src = "";
+                scanBlurPreview.src = "";
+
+                viewDashboard.classList.add('hidden');
+                viewScan.classList.remove('hidden');
+                imgContainer.classList.add('hidden');
+                chevron.classList.remove('rotate-180');
+            }
+        });
+
+        document.getElementById('btn-settings').addEventListener('click', () => {
+            if (viewDashboard.classList.contains('hidden')) {
+                alert("Negativ, Boss! Erst ein Dokument einscannen, um die Editierungs-Zentrale zu entsperren.");
+                return;
+            }
+            document.getElementById('edit-vorname').value = currentData.vorname;
+            document.getElementById('edit-nachname').value = currentData.nachname;
+            document.getElementById('edit-geburtsdatum').value = currentData.geburtsdatum;
+            document.getElementById('edit-typ').value = currentData.typ;
+            document.getElementById('edit-adresse').value = currentData.adresse;
+            document.getElementById('edit-land').value = currentData.land;
+            modalSettings.classList.remove('hidden');
+        });
+
+        document.getElementById('btn-close-settings').addEventListener('click', () => {
+            modalSettings.classList.add('hidden');
+        });
+
+        document.getElementById('btn-save-settings').addEventListener('click', () => {
+            currentData.vorname = document.getElementById('edit-vorname').value;
+            currentData.nachname = document.getElementById('edit-nachname').value;
+            currentData.geburtsdatum = document.getElementById('edit-geburtsdatum').value;
+            currentData.typ = document.getElementById('edit-typ').value;
+            currentData.adresse = document.getElementById('edit-adresse').value;
+            currentData.land = document.getElementById('edit-land').value;
+            
+            renderDashboardData();
+            localStorage.setItem('eu_id_data_pro_v2', JSON.stringify(currentData));
+            modalSettings.classList.add('hidden');
+        });
+    </script>
+</body>
+</html>
